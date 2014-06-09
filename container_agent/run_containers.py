@@ -128,7 +128,9 @@ def LoadVolumes(volumes):
     """Process a "volumes" block of config and return a list of volumes."""
 
     # TODO(thockin): could be a map of name -> Volume
-    all_vol_names = []
+
+    # (gear11): Make the volumes a map, and allow a host path to be specified
+    all_vols = {}
     for vol_index, vol in enumerate(volumes):
         # Get the container name.
         if 'name' not in vol:
@@ -136,11 +138,17 @@ def LoadVolumes(volumes):
         vol_name = vol['name']
         if not IsRfc1035Name(vol_name):
             Fatal('volumes[%d].name is invalid: %s' % (vol_index, vol_name))
-        if vol_name in all_vol_names:
+        if vol_name in all_vols:
             Fatal('volumes[%d].name is not unique: %s' % (vol_index, vol_name))
-        all_vol_names.append(vol_name)
+        vol_spec = {}
+        if 'hostPath' in vol:
+            host_path = vol['hostPath']
+            if not IsValidPath(host_path):
+                Fatal('volumes[%s].hostPath is invalid: %s' % (vol_name, host_path))
+            vol_spec['hostPath'] = host_path
+        all_vols[vol_name] = vol_spec
 
-    return all_vol_names
+    return all_vols
 
 
 # TODO(thockin): We should probably fail on unknown fields in JSON objects.
@@ -315,9 +323,12 @@ def LoadVolumeMounts(mounts_spec, all_volumes, ctr_name):
                   % (ctr_name, vol_name, vol_path))
 
         read_mode = 'ro' if vol_spec.get('readOnly', False) else 'rw'
-
+        if 'hostPath' in all_volumes[vol_name]:
+            host_path = all_volumes[vol_name]['hostPath']
+        else:
+            host_path = '%s/%s' % (VOLUMES_ROOT_DIR, vol_name)
         all_mounts.append(
-            '%s/%s:%s:%s' % (VOLUMES_ROOT_DIR, vol_name, vol_path, read_mode))
+            '%s:%s:%s' % (host_path, vol_path, read_mode))
 
     return all_mounts
 

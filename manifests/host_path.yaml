@@ -1,0 +1,15 @@
+version: v1beta1
+containers:
+  - name: mongodb
+    image: mongodb
+    volumeMounts:
+      - name: mongo-data
+        path: /data
+    ports:
+      - name: mongodb
+        hostPort: 27017
+        containerPort: 27017
+
+volumes:
+  - name: mongo-data
+    hostPath: /mnt/pd1/mongodb/data
