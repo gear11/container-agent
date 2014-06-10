@@ -76,7 +76,6 @@ KEEPALIVE_SCRIPT = """
     fi;
     sleep 1;
     %(log)s "container '%(name)s' (%(id)s) restarting";
-    %(log)s "test";
     %(log)s "command '%(cmd)s'";
     %(docker)s restart '%(id)s' >/dev/null 2>&1;
   done &
