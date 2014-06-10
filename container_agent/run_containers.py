@@ -126,10 +126,6 @@ def IsValidPath(path):
 
 def LoadVolumes(volumes):
     """Process a "volumes" block of config and return a list of volumes."""
-
-    # TODO(thockin): could be a map of name -> Volume
-
-    # (gear11): Make the volumes a map, and allow a host path to be specified
     all_vols = {}
     for vol_index, vol in enumerate(volumes):
         # Get the container name.
@@ -140,13 +136,13 @@ def LoadVolumes(volumes):
             Fatal('volumes[%d].name is invalid: %s' % (vol_index, vol_name))
         if vol_name in all_vols:
             Fatal('volumes[%d].name is not unique: %s' % (vol_index, vol_name))
-        vol_spec = {}
         if 'hostPath' in vol:
             host_path = vol['hostPath']
             if not IsValidPath(host_path):
                 Fatal('volumes[%s].hostPath is invalid: %s' % (vol_name, host_path))
-            vol_spec['hostPath'] = host_path
-        all_vols[vol_name] = vol_spec
+            all_vols[vol_name] = Volume(vol_name, host_path)
+        else:
+            all_vols[vol_name] = Volume(vol_name)
 
     return all_vols
 
@@ -170,6 +166,16 @@ class Container(object):
         self.mounts = []          # [str]
         self.env_vars = []        # [str]
         self.network_from = None  # str
+
+
+class Volume(object):
+
+    # Only allow the supported params
+    __slots__ = ('name', 'host_path')
+
+    def __init__(self, name, host_path=None):
+        self.name = name
+        self.host_path = host_path if host_path else '%s/%s' % (VOLUMES_ROOT_DIR, name)
 
 
 def LoadInfraContainers(user_containers):
@@ -322,11 +328,9 @@ def LoadVolumeMounts(mounts_spec, all_volumes, ctr_name):
             Fatal('containers[%s].volumeMounts[%s].path is invalid: %s'
                   % (ctr_name, vol_name, vol_path))
 
+        host_path = all_volumes[vol_name].host_path
         read_mode = 'ro' if vol_spec.get('readOnly', False) else 'rw'
-        if 'hostPath' in all_volumes[vol_name]:
-            host_path = all_volumes[vol_name]['hostPath']
-        else:
-            host_path = '%s/%s' % (VOLUMES_ROOT_DIR, vol_name)
+
         all_mounts.append(
             '%s:%s:%s' % (host_path, vol_path, read_mode))
 
