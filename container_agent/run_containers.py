@@ -76,6 +76,7 @@ KEEPALIVE_SCRIPT = """
     fi;
     sleep 1;
     %(log)s "container '%(name)s' (%(id)s) restarting";
+    %(log)s "command: '%(cmd)s'";
     %(docker)s restart '%(id)s' >/dev/null 2>&1;
   done &
   """
@@ -447,18 +448,20 @@ def RunContainers(containers):
             stdout=open('/dev/null', 'w'),
             stderr=open('/dev/null', 'w'))
 
-        proc = subprocess.Popen(
-            [DOCKER_CMD, 'run', '-d'] +
-            ['--name', ctr.name] +
-            FlagOrNothing(ctr.hostname, '--hostname') +
-            FlagOrNothing(ctr.working_dir, '--workdir') +
-            FlagOrNothing(ctr.network_from, '--net') +
+        cmd = [DOCKER_CMD, 'run', '-d'] +\
+            ['--name', ctr.name] +\
+            FlagOrNothing(ctr.hostname, '--hostname') +\
+            FlagOrNothing(ctr.working_dir, '--workdir') +\
+            FlagOrNothing(ctr.network_from, '--net') +\
             FlagList(['%s:%s%s' % (p[0], p[1], p[2])
-                      for p in ctr.ports], '-p') +
-            FlagList(ctr.mounts, '-v') +
-            FlagList(ctr.env_vars, '-e') +
-            [ctr.image] +
-            ctr.command,
+                      for p in ctr.ports], '-p') +\
+            FlagList(ctr.mounts, '-v') +\
+            FlagList(ctr.env_vars, '-e') +\
+            [ctr.image] +\
+            ctr.command
+
+        proc = subprocess.Popen(
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         o, _ = proc.communicate()
@@ -470,7 +473,7 @@ def RunContainers(containers):
 
         os.system(KEEPALIVE_SCRIPT %
                   {'docker': DOCKER_CMD, 'log': LOG_CMD,
-                   'name': ctr.name, 'id': ctr_id})
+                   'name': ctr.name, 'id': ctr_id, 'cmd': cmd.join(' ')})
 
 
 def CheckVersion(config):
