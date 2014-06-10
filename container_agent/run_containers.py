@@ -473,7 +473,7 @@ def RunContainers(containers):
 
         os.system(KEEPALIVE_SCRIPT %
                   {'docker': DOCKER_CMD, 'log': LOG_CMD,
-                   'name': ctr.name, 'id': ctr_id, 'cmd': cmd.join(' ')})
+                   'name': ctr.name, 'id': ctr_id, 'cmd': ' '.join(cmd)})
 
 
 def CheckVersion(config):
